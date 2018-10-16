@@ -43,6 +43,7 @@ public class ScheduleAdminController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        dayList=sortDay(dayList);
         List<List<ScheduleSenderDTO>> scheduleListTable = makeTable(dayList, scheduleList);
         model.addAttribute("daylist", dayList);
         model.addAttribute("schedulelist", scheduleListTable);
@@ -60,7 +61,7 @@ public class ScheduleAdminController {
         }
         for(Schedule sch:scheduleList){
             String time =sch.getStarttime().toString();
-            time.substring(0,5);
+            time=time.substring(0,5);
             //----------------------------------------------
             //----------------------------------------------
             sender=new ScheduleSenderDTO(sortingFlag(sch,time),sch.getId(),sch.getScheduleEvent().getName(),time,sch.getDay().getNameDay());
@@ -164,25 +165,33 @@ public class ScheduleAdminController {
         model.addAttribute("schedule", schedule);
         return "schedule/dbclickedit";
     }
-
+//делаем таблицу
     private List<List<ScheduleSenderDTO>> makeTable(List<Day> dayList, List<Schedule> scheduleList) {
         ScheduleSenderDTO sender = null;
+        //создаем двойной List для вывода всей таблицы
         List<List<ScheduleSenderDTO>> scheduleListSenders = new ArrayList<>();
-        for (int i = startTime; i <= endTime; i++) {
+        List<String> listTime=createListTime(scheduleList);
+        for(String attributeTime:listTime){
+     //   for (int i = startTime; i <= endTime; i++) {
             List<ScheduleSenderDTO> scheduleSenders = new ArrayList<>();
-            sender = new ScheduleSenderDTO(i + ":00");
+            //добавляем первый элемент для выода времени
+         //   String attributeTime = i + ":00";
+            sender = new ScheduleSenderDTO(attributeTime);
             scheduleSenders.add(sender);
+            //перебираем последущие элементы для добавления в List scheduleSender
             for (Day d : dayList) {
-                String attributeTime = i + ":00";
+
                 Integer idday = d.getId();
-                sender = new ScheduleSenderDTO("", attributeTime, idday.toString());
+                sender = new ScheduleSenderDTO("", attributeTime, idday.toString());//имя ="",  атрибут Времени, арибут дня недели
                 sender.setScheduleList(haveSchedules(d.getId(), attributeTime, scheduleList));
                 scheduleSenders.add(sender);
             }
             scheduleListSenders.add(scheduleSenders);
-        }
+       }
         return scheduleListSenders;
     }
+
+
 
     private List<Schedule> haveSchedules(int dayId, String time, List<Schedule> readScheduleList) {
         SimpleDateFormat localDateFormat = new SimpleDateFormat("HH:mm");
@@ -196,9 +205,7 @@ public class ScheduleAdminController {
 
         List<Schedule> scheduleList = new ArrayList<>();
         for (Schedule schedule : readScheduleList) {
-          //  long timeStart = schedule.getStarttime().getTime();
-          //  long timeTable = date.getTime();
-            //   java.util.Date dt=new java.util.Date(schedule.getStarttime().getTime());
+            //если совпадает в прочитаном List событий id дня недели с id дня и дата с датой события
             if ((schedule.getDay().getId() == dayId) && (date.getTime() == schedule.getStarttime().getTime())) {
                 scheduleList.add(schedule);
             }
@@ -241,4 +248,67 @@ public class ScheduleAdminController {
 
         return listSender;
     }
+    //сортируем день недели по признаку
+    private List<Day> sortDay(List<Day>dayList){
+        Collections.sort(dayList, new Comparator<Day>() {
+            @Override
+            public int compare(Day day1, Day day2) {
+                if(day1.getAttribute()>day2.getAttribute()){
+                    return 1;
+                }
+                if(day1.getAttribute()<day2.getAttribute()){
+                    return -1;
+                }
+                return 0;
+            }
+        });
+        return dayList;
+    }
+    private List<String> createListTime(List<Schedule> scheduleList) {
+        List<String> list=new ArrayList<>();
+        for(Schedule schedule:scheduleList){
+            String time=schedule.getStarttime().toString().substring(0,5);
+            list.add(time);
+        }
+        list=sortTimeString(list);
+        list=removeDublicate(list);
+        return list;
+    }
+    private List<String> sortTimeString(List<String> list){
+      Collections.sort(list, new Comparator<String>() {
+          @Override
+          public int compare(String o1, String o2) {
+              if(stringTimeToLong(o1)>stringTimeToLong(o2)){
+                  return 1;
+              }
+              if(stringTimeToLong(o1)<stringTimeToLong(o2)){
+                  return -1;
+              }
+              return 0;
+          }
+      });
+      return list;
+    }
+    private long stringTimeToLong(String time){
+        SimpleDateFormat localDateFormat = new SimpleDateFormat("HH:mm");
+        Date date = null;
+        try {
+            date = localDateFormat.parse(time);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return date.getTime();
+    }
+    private List<String> removeDublicate(List<String> list){
+        List<String> list2 = new ArrayList<String>();
+        HashSet<String> lookup = new HashSet<String>();
+        for (String item : list) {
+            if (lookup.add(item)) {
+                // Set.add returns false if item is already in the set
+                list2.add(item);
+            }
+        }
+        return list2;
+    }
+
 }
